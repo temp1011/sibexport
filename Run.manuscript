@@ -1,1 +1,40 @@
-Sibelius.ShowDialog(Prefs, Self);
+
+scr = Sibelius.ActiveScore;
+
+//First, start with the xml header
+xmldata = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n";
+
+//Now, the DOCTYPE
+xmldata = xmldata & "<!DOCTYPE score-partwise PUBLIC\n";
+xmldata = xmldata & "    \"-//Recordare\/\/DTD MusicXML 2.0 Partwise\/\/EN\"\n";
+xmldata = xmldata & "    \"http:\/\/www.musicxml.org/dtds/partwise.dtd\">\n";
+
+//Let"s open the root tag
+xmldata = xmldata & "<score-partwise version=\"2.0\">\n";
+
+
+//Now let"s add the part list
+
+xmldata = xmldata & "  <part-list>\n";
+partlist = scr.DynamicParts;
+numparts = scr.StaffCount;
+
+
+//0 is the full score
+
+for i = 0 to numparts{
+	xmldata = xmldata & "    <score-part id=\"P";
+	xmldata = xmldata & i;
+	xmldata = xmldata & "\">\n";
+
+	xmldata = xmldata & "      <part-name>";
+	xmldata = xmldata & scr[i].FullInstrumentName;
+	xmldata = xmldata & "</part-name>\n";
+	xmldata = xmldata & "    </score-part>\n";
+	i = i+1;
+}
+
+xmldata = xmldata & "  </part-list>";
+
+
+Sibelius.MessageBox(xmldata);
