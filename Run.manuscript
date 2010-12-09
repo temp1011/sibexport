@@ -34,7 +34,49 @@ for i = 0 to numparts{
 	i = i+1;
 }
 
-xmldata = xmldata & "  </part-list>";
+xmldata = xmldata & "  </part-list>\n";
+
+notedur = CreateSparseArray();
+
+currentdiv = 0;
+bar = 0;
+newdiv=0;
+
+for i = 0 to numparts{
+	currentdiv=0;
+	xmldata = xmldata & "<part id=\"P";
+	xmldata = xmldata & i;
+	xmldata = xmldata & "\">\n";
+	for bar = 1 to scr[i].BarCount{
+		xmldata = xmldata & "	<measure number=\"";
+		xmldata = xmldata & bar;
+		xmldata = xmldata & "\">\n";
+		xmldata = xmldata & "		<attributes>\n";
+		xmldata = xmldata & "			<divisions>";
+		notedur.Length = scr[i].NthBar(bar).BarObjectCount;
+		for obj = 0 to scr[i].NthBar(bar).BarObjectCount{
+			if(scr[i].NthBar(bar).NthBarObject(obj).Type = "NoteRest"){
+				notedur[obj] = scr[i].NthBar(bar).NthBarObject(obj).Duration;
+			}
+		}
+		//Now we need to find the GCD to get the divisions
+		currentdiv = scr[i].NthBar(bar).Length;
+		for x = 0 to notedur.Length{
+			if(notedur[x] > 0){
+				newdiv = notedur[x];
+				if(notedur[x] != currentdiv){
+					currentdiv = gcd(newdiv,currentdiv);
+				}
+			}
+		}
+		currentdiv = scr[i].NthBar(bar).Length/currentdiv;
+		xmldata = xmldata & currentdiv;
+		xmldata = xmldata & "</divisions>\n";
+		xmldata = xmldata & "		</attributes>\n";
+		xmldata = xmldata & "	</measure>\n";
+		xmldata = xmldata & "</part>\n\n";
+	}
+}
 
 
 Sibelius.MessageBox(xmldata);
