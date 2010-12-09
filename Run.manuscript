@@ -18,7 +18,8 @@ xmldata = xmldata & "<score-partwise version=\"2.0\">\n";
 xmldata = xmldata & "  <part-list>\n";
 partlist = scr.DynamicParts;
 numparts = scr.StaffCount;
-
+partperc = 0;
+totalperc = 0;
 
 //0 is the full score
 
@@ -36,47 +37,55 @@ for i = 0 to numparts{
 
 xmldata = xmldata & "  </part-list>\n";
 
-notedur = CreateSparseArray();
 
-currentdiv = 0;
 bar = 0;
-newdiv=0;
-
+obj = 0;
+oct = 0;
+pit = 0;
+alt = 0;
+//Do this for each part
 for i = 0 to numparts{
-	currentdiv=0;
 	xmldata = xmldata & "<part id=\"P";
 	xmldata = xmldata & i;
 	xmldata = xmldata & "\">\n";
+
+//Do this for every bar in each part (This is the bulk of the program)
+
 	for bar = 1 to scr[i].BarCount{
 		xmldata = xmldata & "	<measure number=\"";
 		xmldata = xmldata & bar;
 		xmldata = xmldata & "\">\n";
-		xmldata = xmldata & "		<attributes>\n";
-		xmldata = xmldata & "			<divisions>";
-		notedur.Length = scr[i].NthBar(bar).BarObjectCount;
-		for obj = 0 to scr[i].NthBar(bar).BarObjectCount{
-			if(scr[i].NthBar(bar).NthBarObject(obj).Type = "NoteRest"){
-				notedur[obj] = scr[i].NthBar(bar).NthBarObject(obj).Duration;
-			}
-		}
-		//Now we need to find the GCD to get the divisions
-		currentdiv = scr[i].NthBar(bar).Length;
-		for x = 0 to notedur.Length{
-			if(notedur[x] > 0){
-				newdiv = notedur[x];
-				if(notedur[x] != currentdiv){
-					currentdiv = gcd(newdiv,currentdiv);
+
+		//Do something for every object in the bar
+		for obj = 0 to scr[i].NthBar(obj).BarObjectCount{
+			if(scr[i].NthBar(obj).NthBarObject(obj).Type = "NoteRest"){
+				xmldata = xmldata & "				<note>\n";
+				xmldata = xmldata & "					<pitch>";
+				for n = 0 to scr[i].NthBar(obj).NthBarObject(obj).NoteCount{
+					oct = RoundUp((scr[i].NthBar(obj).NthBarObject(obj)[n]/12)) - 1;
+					pit = scr[i].NthBar(obj).NthBarObject(obj)[n] - (oct*12);
+					//TIME TO GET PITCHES (MAYBE USING ASCII CHARS?)
+				//	xmldata = xmldata & 
 				}
 			}
 		}
-		currentdiv = scr[i].NthBar(bar).Length/currentdiv;
-		xmldata = xmldata & currentdiv;
-		xmldata = xmldata & "</divisions>\n";
-		xmldata = xmldata & "		</attributes>\n";
+
+/* NOT CORRECT
+		if(bar = 1){
+			xmldata = xmldata & "		<attributes>\n";
+			xmldata = xmldata & "			<divisions>";
+			xmldata = xmldata & scr[i].NthBar(bar).Length;
+			xmldata = xmldata & "</divisions>\n";
+			xmldata = xmldata & "		</attributes>\n";
+		}*/
 		xmldata = xmldata & "	</measure>\n";
-		xmldata = xmldata & "</part>\n\n";
 	}
+	xmldata = xmldata & "</part>\n\n";
+	
 }
+xmldata = xmldata & "</score-partwise><!--THE END-->";
+fname = Sibelius.GetDocumentsFolder();
+fname = fname & "foo.xml";
 
-
-Sibelius.MessageBox(xmldata);
+Sibelius.CreateTextFile(fname);
+Sibelius.AppendTextFile(fname,xmldata);
