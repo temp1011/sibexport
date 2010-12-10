@@ -57,16 +57,23 @@ for i = 0 to numparts{
 		xmldata = xmldata & "\">\n";
 
 		//Do something for every object in the bar
-		for obj = 0 to scr[i].NthBar(obj).BarObjectCount{
+		for obj = 1 to scr[i].NthBar(obj).BarObjectCount{
 			if(scr[i].NthBar(obj).NthBarObject(obj).Type = "NoteRest"){
 				xmldata = xmldata & "				<note>\n";
-				xmldata = xmldata & "					<pitch>";
+				xmldata = xmldata & "					<pitch>\n";
 				for n = 0 to scr[i].NthBar(obj).NthBarObject(obj).NoteCount{
-					oct = RoundUp((scr[i].NthBar(obj).NthBarObject(obj)[n]/12)) - 1;
-					pit = scr[i].NthBar(obj).NthBarObject(obj)[n] - (oct*12);
+					oct = RoundUp(((scr[i].NthBar(obj).NthBarObject(obj)[n].Pitch+3)/12)) - 1;
+//					pit = scr[i].NthBar(obj).NthBarObject(obj)[n] - (oct*12);
+//					pit = RoundUp(pit/2);
 					//TIME TO GET PITCHES (MAYBE USING ASCII CHARS?)
-				//	xmldata = xmldata & 
+// STEP
+					xmldata = xmldata & "						<octave>";
+					xmldata = xmldata & oct;
+					xmldata = xmldata & "</octave>\n";
+
 				}
+				xmldata = xmldata & "					<pitch>\n";
+				xmldata = xmldata & "				</note>\n";
 			}
 		}
 
