@@ -8,7 +8,6 @@ xmldata = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n";
 xmldata = xmldata & "<!DOCTYPE score-partwise PUBLIC\n";
 xmldata = xmldata & "    \"-//Recordare\/\/DTD MusicXML 2.0 Partwise\/\/EN\"\n";
 xmldata = xmldata & "    \"http:\/\/www.musicxml.org/dtds/partwise.dtd\">\n";
-
 //Let"s open the root tag
 xmldata = xmldata & "<score-partwise version=\"2.0\">\n";
 
@@ -45,49 +44,62 @@ pit = 0;
 alt = 0;
 //Do this for each part
 for i = 0 to numparts{
-	xmldata = xmldata & "<part id=\"P";
+	xmldata = xmldata & "  <part id=\"P";
 	xmldata = xmldata & i;
 	xmldata = xmldata & "\">\n";
 
 //Do this for every bar in each part (This is the bulk of the program)
 
 	for bar = 1 to scr[i].BarCount{
-		xmldata = xmldata & "	<measure number=\"";
+		xmldata = xmldata & "    <measure number=\"";
 		xmldata = xmldata & bar;
 		xmldata = xmldata & "\">\n";
 
 		//Do something for every object in the bar
-		for obj = 1 to scr[i].NthBar(obj).BarObjectCount{
-			if(scr[i].NthBar(obj).NthBarObject(obj).Type = "NoteRest"){
-				xmldata = xmldata & "				<note>\n";
-				xmldata = xmldata & "					<pitch>\n";
-				for n = 0 to scr[i].NthBar(obj).NthBarObject(obj).NoteCount{
-					oct = RoundUp(((scr[i].NthBar(obj).NthBarObject(obj)[n].Pitch+3)/12)) - 1;
-//					pit = scr[i].NthBar(obj).NthBarObject(obj)[n] - (oct*12);
-//					pit = RoundUp(pit/2);
-					//TIME TO GET PITCHES (MAYBE USING ASCII CHARS?)
-// STEP
-					xmldata = xmldata & "						<octave>";
+		for obj = 0 to scr[i].NthBar(bar).BarObjectCount{
+			if(scr[i].NthBar(bar).NthBarObject(obj).Type = "NoteRest"){
+				xmldata = xmldata & "      <note>\n";
+				xmldata = xmldata & "        <pitch>\n";
+				for n = 0 to scr[i].NthBar(bar).NthBarObject(obj).NoteCount{
+					oct = RoundUp(((scr[i].NthBar(bar).NthBarObject(obj)[n].Pitch+3)/12)) - 2;
+					pit = scr[i].NthBar(bar).NthBarObject(obj)[n].Name;
+					pit = Substring(pit,0,1);
+					
+					xmldata = xmldata & "          <step>";
+					xmldata = xmldata & pit;
+					xmldata = xmldata & "</step>\n";
+					
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Accidental = Sharp){
+						xmldata = xmldata & "          <alter>1</alter>\n";
+					}
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Accidental = Flat){
+						xmldata = xmldata & "          <alter>-1</alter>\n";
+					}
+					
+					xmldata = xmldata & "          <octave>";
 					xmldata = xmldata & oct;
 					xmldata = xmldata & "</octave>\n";
 
 				}
-				xmldata = xmldata & "					<pitch>\n";
-				xmldata = xmldata & "				</note>\n";
+				xmldata = xmldata & "        </pitch>\n";
+				xmldata = xmldata & "        <duration>";
+				xmldata = xmldata & scr[i].NthBar(bar).NthBarObject(obj)[n].Duration;
+				xmldata = xmldata & "</duration>\n";
+				xmldata = xmldata & "      </note>\n";
 			}
 		}
 
 /* NOT CORRECT
 		if(bar = 1){
-			xmldata = xmldata & "		<attributes>\n";
-			xmldata = xmldata & "			<divisions>";
+			xmldata = xmldata & "      <attributes>\n";
+			xmldata = xmldata & "        <divisions>";
 			xmldata = xmldata & scr[i].NthBar(bar).Length;
 			xmldata = xmldata & "</divisions>\n";
-			xmldata = xmldata & "		</attributes>\n";
+			xmldata = xmldata & "      </attributes>\n";
 		}*/
-		xmldata = xmldata & "	</measure>\n";
+		xmldata = xmldata & "    </measure>\n";
 	}
-	xmldata = xmldata & "</part>\n\n";
+	xmldata = xmldata & "  </part>\n";
 	
 }
 xmldata = xmldata & "</score-partwise><!--THE END-->";
