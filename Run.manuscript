@@ -40,8 +40,15 @@ xmldata = xmldata & "  </part-list>\n";
 bar = 0;
 obj = 0;
 oct = 0;
+tims = 0;
 pit = 0;
 alt = 0;
+attri = 0;
+ndiv = 0;
+sbar = 0;
+
+tsnum = 0;
+tsden = 0;
 //Do this for each part
 for i = 0 to numparts{
 	xmldata = xmldata & "  <part id=\"P";
@@ -55,13 +62,44 @@ for i = 0 to numparts{
 		xmldata = xmldata & bar;
 		xmldata = xmldata & "\">\n";
 
+
+
+//Stores wether the attribute tag is open
+       	attri = 0;
+
+//TOFIX: division shows up multiple times. why?
+        for sbar = 0 to scr.SystemStaff[bar].BarObjectCount{
+			if(scr.SystemStaff[bar].NthBarObject(obj).Type = "TimeSignature"){
+				if(attri = 0){
+					xmldata = xmldata & "      <attributes>\n";
+				}
+				attri = 1;
+				xmldata = xmldata & "        <divisions>";
+				xmldata = xmldata & scr[i].NthBar(bar).Length;
+				xmldata = xmldata & "</divisions>\n";
+				tsnum = scr.SystemStaff[bar].NthBarObject(obj).Numerator;
+				tsden = scr.SystemStaff[bar].NthBarObject(obj).Denominator;
+			}
+       }
+
+
+		if(attri){
+			xmldata = xmldata & "      </attributes>\n";
+          attri = 0;
+		}
+
 		//Do something for every object in the bar
 		for obj = 0 to scr[i].NthBar(bar).BarObjectCount{
+
+          tims = 0;
+          
+
+//Parse a note (or rest - TODO)
 			if(scr[i].NthBar(bar).NthBarObject(obj).Type = "NoteRest"){
 				xmldata = xmldata & "      <note>\n";
 				xmldata = xmldata & "        <pitch>\n";
 				for n = 0 to scr[i].NthBar(bar).NthBarObject(obj).NoteCount{
-					oct = RoundUp(((scr[i].NthBar(bar).NthBarObject(obj)[n].Pitch+3)/12)) - 2;
+					oct = RoundUp(((scr[i].NthBar(bar).NthBarObject(obj)[n].Pitch)/12)) - 1;
 					pit = scr[i].NthBar(bar).NthBarObject(obj)[n].Name;
 					pit = Substring(pit,0,1);
 					
@@ -79,13 +117,35 @@ for i = 0 to numparts{
 					xmldata = xmldata & "          <octave>";
 					xmldata = xmldata & oct;
 					xmldata = xmldata & "</octave>\n";
+					xmldata = xmldata & "        </pitch>\n";
+					xmldata = xmldata & "        <type>";
 
+					ndiv = scr[i].NthBar(bar).Length/scr[i].NthBar(bar).NthBarObject(obj)[n].Duration;
+//TODO add code to derive note type using time signature and ratio of length to measure (more work than it may seem like)
+//Until then, I"ll ignore the type
+/*					if(ndiv = 1){
+						if(tsden = )
+						xmldata = xmldata & "whole";
+					}
+					if(ndiv = 2){
+						xmldata = xmldata & "half";
+					}
+					if(ndiv = 4){
+						xmldata = xmldata & "quarter";
+					}
+					if(ndiv = 8){
+						xmldata = xmldata & "eigth";
+					}
+					if(ndiv = 16){
+						xmldata = xmldata & "16th";
+					}
+					xmldata = xmldata & "</type>\n";*/
+
+					xmldata = xmldata & "        <duration>";
+					xmldata = xmldata & scr[i].NthBar(bar).NthBarObject(obj)[n].Duration;
+					xmldata = xmldata & "</duration>\n";
+					xmldata = xmldata & "      </note>\n";
 				}
-				xmldata = xmldata & "        </pitch>\n";
-				xmldata = xmldata & "        <duration>";
-				xmldata = xmldata & scr[i].NthBar(bar).NthBarObject(obj)[n].Duration;
-				xmldata = xmldata & "</duration>\n";
-				xmldata = xmldata & "      </note>\n";
 			}
 		}
 
@@ -97,6 +157,7 @@ for i = 0 to numparts{
 			xmldata = xmldata & "</divisions>\n";
 			xmldata = xmldata & "      </attributes>\n";
 		}*/
+
 		xmldata = xmldata & "    </measure>\n";
 	}
 	xmldata = xmldata & "  </part>\n";
@@ -107,4 +168,4 @@ fname = Sibelius.GetDocumentsFolder();
 fname = fname & "foo.xml";
 
 Sibelius.CreateTextFile(fname);
-Sibelius.AppendTextFile(fname,xmldata);
+Sibelius.AppendTextFile(fname,xmldata,0);
