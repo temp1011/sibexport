@@ -1,2 +1,0 @@
-AddToPluginsMenu("","Run"); 
-Sibelius.ShowDialog(Prefs, Self);
