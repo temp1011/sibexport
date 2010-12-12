@@ -1,5 +1,12 @@
+//DEBUG------------
+
+debug = 1;
+
+//-----------------
+
 
 scr = Sibelius.ActiveScore;
+
 
 //First, start with the xml header
 xmldata = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n";
@@ -46,6 +53,7 @@ alt = 0;
 attri = 0;
 ndiv = 0;
 sbar = 0;
+dotted = 0;
 
 tsnum = 0;
 tsden = 0;
@@ -65,11 +73,11 @@ for i = 0 to numparts{
 
 
 //Stores wether the attribute tag is open
-       	attri = 0;
+		attri = 0;
 
 //TOFIX: division shows up multiple times. why?
-        for sbar = 0 to scr.SystemStaff[bar].BarObjectCount{
-			if(scr.SystemStaff[bar].NthBarObject(obj).Type = "TimeSignature"){
+		for sbar = 0 to scr.SystemStaff[bar].BarObjectCount{
+			if(scr.SystemStaff[bar].NthBarObject(sbar).Type = "TimeSignature"){
 				if(attri = 0){
 					xmldata = xmldata & "      <attributes>\n";
 				}
@@ -77,8 +85,6 @@ for i = 0 to numparts{
 				xmldata = xmldata & "        <divisions>";
 				xmldata = xmldata & scr[i].NthBar(bar).Length;
 				xmldata = xmldata & "</divisions>\n";
-				tsnum = scr.SystemStaff[bar].NthBarObject(obj).Numerator;
-				tsden = scr.SystemStaff[bar].NthBarObject(obj).Denominator;
 			}
        }
 
@@ -120,26 +126,77 @@ for i = 0 to numparts{
 					xmldata = xmldata & "        </pitch>\n";
 					xmldata = xmldata & "        <type>";
 
-					ndiv = scr[i].NthBar(bar).Length/scr[i].NthBar(bar).NthBarObject(obj)[n].Duration;
-//TODO add code to derive note type using time signature and ratio of length to measure (more work than it may seem like)
-//Until then, I"ll ignore the type
-/*					if(ndiv = 1){
-						if(tsden = )
+//					ndiv = scr[i].NthBar(bar).Length/scr[i].NthBar(bar).NthBarObject(obj)[n].Duration;
+//Not sure if this is reliable, but I"ll try it for now
+					dotted = 0;
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 1024){
 						xmldata = xmldata & "whole";
 					}
-					if(ndiv = 2){
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 512){
 						xmldata = xmldata & "half";
 					}
-					if(ndiv = 4){
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 256){
 						xmldata = xmldata & "quarter";
 					}
-					if(ndiv = 8){
-						xmldata = xmldata & "eigth";
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 128){
+						xmldata = xmldata & "eighth";
 					}
-					if(ndiv = 16){
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 64){
 						xmldata = xmldata & "16th";
 					}
-					xmldata = xmldata & "</type>\n";*/
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 32){
+						xmldata = xmldata & "32nd";
+					}
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 16){
+						xmldata = xmldata & "64th";
+					}
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 8){
+						xmldata = xmldata & "128th";
+					}
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 4){
+						xmldata = xmldata & "256th";
+					}
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 1536){
+						xmldata = xmldata & "whole";
+						dotted = 1;
+					}
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 768){
+						xmldata = xmldata & "half";
+						dotted = 1;
+					}
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 384){
+						xmldata = xmldata & "quarter";
+						dotted = 1;
+					}
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 192){
+						xmldata = xmldata & "eighth";
+						dotted = 1;
+					}
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 96){
+						xmldata = xmldata & "16th";
+						dotted = 1;
+					}
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 48){
+						xmldata = xmldata & "32nd";
+						dotted = 1;
+					}
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 24){
+						xmldata = xmldata & "64th";
+						dotted = 1;
+					}
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 12){
+						xmldata = xmldata & "128th";
+						dotted = 1;
+					}
+					if(scr[i].NthBar(bar).NthBarObject(obj)[n].Duration = 6){
+						xmldata = xmldata & "256th";
+						dotted = 1;
+					}
+					xmldata = xmldata & "</type>\n";
+
+					if(dotted = 1){
+						xmldata = xmldata & "        <dot></dot>\n";
+					}
 
 					xmldata = xmldata & "        <duration>";
 					xmldata = xmldata & scr[i].NthBar(bar).NthBarObject(obj)[n].Duration;
@@ -148,7 +205,6 @@ for i = 0 to numparts{
 				}
 			}
 		}
-
 /* NOT CORRECT
 		if(bar = 1){
 			xmldata = xmldata & "      <attributes>\n";
@@ -164,8 +220,15 @@ for i = 0 to numparts{
 	
 }
 xmldata = xmldata & "</score-partwise><!--THE END-->";
-fname = Sibelius.GetDocumentsFolder();
-fname = fname & "foo.xml";
+
+if(debug){
+	fname = Sibelius.GetDocumentsFolder();
+	fname = fname & "foo.xml";
+}
+//else{
+//Add dialog to specify filename
+//}
+
 
 Sibelius.CreateTextFile(fname);
 Sibelius.AppendTextFile(fname,xmldata,0);
