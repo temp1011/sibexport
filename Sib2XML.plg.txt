@@ -1,0 +1,811 @@
+	Initialize "() {
+AddToPluginsMenu('SibExport','Run'); 
+	Run "() {
+//DEBUG------------
+debug = 0;
+//-----------------
+fname = '';	
+bar = 0;
+obj = 0;
+oct = 0;
+tims = 0;
+pit = 0;
+alt = 0;
+attri = 0;
+ndiv = 0;
+sbar = 0;
+dotted = 0;
+tsnum = 0;
+tsden = 0;
+scr = Sibelius.ActiveScore;
+mydocsmessage = 'The file will be stored in ' & Sibelius.GetDocumentsFolder() & 'sibexport';
+sdiag = Sibelius.ShowDialog(SibExport,Self);
+xmldata = '';
+if(sdiag){
+	xmldata = xmldata & createheader(scr);
+	xmldata = xmldata & createscoreheader(scr);
+	//Now let's add the part list
+	xmldata = xmldata & 	createpartlist(scr);
+	//Do this for each part
+	for i = 0 to scr.StaffCount{
+		Sibelius.CreateProgressDialog('Part ' & (i+1) & ' of ' & scr.StaffCount,0,scr[i].BarCount);
+		xmldata = xmldata & 		createpart(scr,i);
+		Sibelius.DestroyProgressDialog();
+	xmldata = xmldata & '</score-partwise><!--THE END-->';
+	if(debug = 1){
+		fname = Sibelius.GetDocumentsFolder();
+		fname = fname & 'foo.xml';
+	else{
+		fname = Sibelius.GetDocumentsFolder() & 'sibexport\\' & fname;
+	Sibelius.MessageBox(fname);
+	Sibelius.CreateTextFile(fname);
+	Sibelius.AppendTextFile(fname,xmldata,0);
+	SibExport "Dialog"
+		Controls
+			Button
+			{
+				Title "Export"
+				ID "IDC_BUTTON2"
+				X "107"
+				Y "123"
+				Width "66"
+				Height "19"
+				DefaultButton "0"
+				Value
+				Method
+				SetFocus "0"
+				EndDialog "1"
+			}
+			Button
+			{
+				Title "Cancel"
+				ID "IDC_BUTTON"
+				X "20"
+				Y "123"
+				Width "67"
+				Height "19"
+				DefaultButton "1"
+				Value
+				Method
+				SetFocus "0"
+				EndDialog "0"
+			}
+			Text
+			{
+				Title "Filename:"
+				ID "IDC_STATIC"
+				X "8"
+				Y "57"
+				Width "46"
+				Height "11"
+				RightAlign "1"
+				Value
+				Method
+				SetFocus "0"
+			}
+			Edit
+			{
+				Title
+				ID "TEXTBOX_FILENAME"
+				X "71"
+				Y "55"
+				Width "107"
+				Height "12"
+				Value "fname"
+				Method
+				SetFocus "0"
+			}
+			Text
+			{
+				Title "The file is stored in your Documents folder in a folder called sibexport"
+				ID "IDC_STATIC2"
+				X "13"
+				Y "25"
+				Width "174"
+				Height "17"
+				RightAlign "0"
+				Value "mydocsmessage"
+				Method
+				SetFocus "0"
+			}
+			Text
+			{
+				Title "Consider contributing to SibExport! Go to http://code.google.com/p/sibexport to help!"
+				ID "IDC_STATIC3"
+				X "20"
+				Y "86"
+				Width "167"
+				Height "19"
+				RightAlign "0"
+				Value
+				Method
+				SetFocus "0"
+			}
+		Title "SibExport"
+		X "327"
+		Y "148"
+		Width "199"
+		Height "178"
+	createheader "(scr) {
+	xmldata = '';
+	//First, start with the xml header
+	xmldata = '<?xml version=\'1.0\' encoding=\'UTF-8\' standalone=\'no\'?>\n';
+	//Now, the DOCTYPE
+	xmldata = xmldata & '<!DOCTYPE score-partwise PUBLIC\n';
+	xmldata = xmldata & '    \'-//Recordare\/\/DTD MusicXML 2.0 Partwise\/\/EN\'\n';
+	xmldata = xmldata & '    \'http:\/\/www.musicxml.org/dtds/partwise.dtd\'>\n';
+	//Let's open the root tag
+	xmldata = xmldata & '<score-partwise version=\'2.0\'>\n';
+	return xmldata;}"
+	createpartlist "(scr) {
+	xmldata = '';
+	xmldata = xmldata & '  <part-list>\n';
+	partlist = scr.DynamicParts;
+	numparts = scr.StaffCount;
+	partperc = 0;
+	totalperc = 0;
+	for i = 0 to numparts{
+		xmldata = xmldata & '    <score-part id=\'P';
+		xmldata = xmldata & i;
+		xmldata = xmldata & '\'>\n';
+		xmldata = xmldata & '      <part-name>';
+		xmldata = xmldata & scr[i].FullInstrumentName;
+		xmldata = xmldata & '</part-name>\n';
+		xmldata = xmldata & '    </score-part>\n';
+		i = i+1;
+	}		
+	xmldata = xmldata & '  </part-list>\n';
+	return xmldata;}"
+	createpart "(scr,i) {
+		voicenum = 0;
+		ptplet = 0;
+		cantbegin = 0;
+		currdur = 0;
+		tied = 0;
+		tiedlength = 0;
+		beam = '';
+		voiceforward = 0;
+		newobj = 0;
+		notations = 0;
+		voicef = 0;
+		tupdur = 0;
+		tuptype = 0;
+		tupi = 0;
+		timesiginit = 0;
+		newbar = 0;
+		tupactual = 0;
+		clefsign = '';
+		clefline = 0;
+		durrtype = '';
+		voicei = 0;
+		keymode = '';
+		xmldata = '';
+		xmldata = xmldata & '  <part id=\'P';
+		xmldata = xmldata & i;
+		xmldata = xmldata & '\'>\n';
+	//Do this for every bar in each part (This is the bulk of the program)
+		for bar = 1 to scr[i].BarCount{
+			xmldata = xmldata & '    <measure number=\'';
+			xmldata = xmldata & bar;
+			xmldata = xmldata & '\'>\n';
+			attri = 0;
+			for sbar = 0 to scr.SystemStaff[bar].BarObjectCount{
+				if(bar = 1 and sbar = 0){
+					if(attri = 0){
+						xmldata = xmldata & '      <attributes>\n';
+						attri = 1;
+					}
+					xmldata = xmldata & '        <divisions>';
+					xmldata = xmldata & (scr[i].NthBar(bar).Length/scr.SystemStaff[1].NthBarObject(timesiginit).Numerator);
+					xmldata = xmldata & '</divisions>\n';
+					if(scr[i].InitialKeySignature.Major){
+						keymode = 'major';
+					}
+					else{
+						keymode = 'minor';
+					}
+					xmldata = xmldata & '        <key>\n';
+					xmldata = xmldata & '          <fifths>' & scr[i].InitialKeySignature.Sharps & '</fifths>\n';
+					xmldata = xmldata & '          <mode>' & keymode & '</mode>\n';
+					xmldata = xmldata & '        </key>\n';
+					while(scr.SystemStaff[1].NthBarObject(timesiginit).Type != 'TimeSignature'){
+						timesiginit = timesiginit + 1;
+					}
+					xmldata = xmldata & '        <time>\n';
+					xmldata = xmldata & '          <beats>';
+					xmldata = xmldata & scr.SystemStaff[1].NthBarObject(timesiginit).Numerator;
+					xmldata = xmldata & '</beats>\n';
+					xmldata = xmldata & '          <beat-type>';
+					xmldata = xmldata & scr.SystemStaff[1].NthBarObject(timesiginit).Denominator;
+					xmldata = xmldata & '</beat-type>\n';
+					xmldata = xmldata & '        </time>\n';
+					clefsign = scr[i].InitialClefStyle;
+					if(clefsign = 'Treble'){
+						clefsign = 'G';
+						clefline = 2;
+					}
+					if(clefsign = 'Bass'){
+						clefsign = 'F';
+						clefline = 4;
+					}
+					xmldata = xmldata & '        <clef>\n';
+					xmldata = xmldata & '          <sign>' & clefsign & '</sign>\n';
+					xmldata = xmldata & '          <line>' & clefline & '</line>\n';
+					xmldata = xmldata & '        </clef>\n';
+				}
+				if(scr.SystemStaff[bar].NthBarObject(sbar).Type = 'TimeSignature' and bar != 1){
+					if(attri = 0){
+						xmldata = xmldata & '      <attributes>\n';
+						attri = 1;
+					}
+					xmldata = xmldata & '        <divisions>';
+					xmldata = xmldata & scr[i].NthBar(bar).Length;
+					xmldata = xmldata & '</divisions>\n';
+					xmldata = xmldata & '        <time>\n';
+					xmldata = xmldata & '          <beats>';
+					xmldata = xmldata & scr.SystemStaff[bar].NthBarObject(sbar).Numerator;
+					xmldata = xmldata & '</beats>\n';
+					xmldata = xmldata & '          <beat-type>';
+					xmldata = xmldata & scr.SystemStaff[bar].NthBarObject(sbar).Denominator;
+					xmldata = xmldata & '</beat-type>\n';
+					xmldata = xmldata & '        </time>\n';
+				}
+			}
+			if(attri){
+				xmldata = xmldata & '      </attributes>\n';
+	          attri = 0;
+			}
+	//Stores wether the attribute tag is open
+			attri = 0;
+			voicei = 1;
+			while(voicei > 0){
+			if(voicei > 1){
+				xmldata = xmldata & '      <backup>\n';
+				xmldata = xmldata & '        <duration>' & (scr[i].NthBar(bar).Length-voiceforward) & '</duration>\n';
+				xmldata = xmldata & '      </backup>\n';
+			}
+			voicenum = 0;	
+			voiceforward = -1;
+			//Do something for every object in the bar
+				for obj = 0 to scr[i].NthBar(bar).BarObjectCount{
+					if(scr[i].NthBar(bar).NthBarObject(obj).VoiceNumber = voicei or scr[i].NthBar(bar).NthBarObject(obj).VoiceNumber = 0){
+		          tims = 0;	
+					if(scr[i].NthBar(bar).NthBarObject(obj).Type = 'KeySignature'){	
+						xmldata = xmldata & '      <attributes>\n';	
+						if(scr[i].NthBar(bar).NthBarObject(obj).Major){
+							keymode = 'major';
+						}
+						else{
+								keymode = 'minor';
+						}	
+						xmldata = xmldata & '        <key>\n';
+						xmldata = xmldata & '          <fifths>' & scr[i].NthBar(bar).NthBarObject(obj).Sharps & '</fifths>\n';
+						xmldata = xmldata & '          <mode>' & keymode & '</mode>\n';
+						xmldata = xmldata & '        </key>\n';
+						xmldata = xmldata & '      </attributes>\n';
+					}
+					if(scr[i].NthBar(bar).NthBarObject(obj).Type = 'Clef'){
+						xmldata = xmldata & '      <attributes>\n';
+						clefsign = scr[i].NthBar(bar).NthBarObject(obj).ConcertClefStyle;
+						if(clefsign = 'Treble'){
+							clefsign = 'G';
+							clefline = 2;
+						}
+						if(clefsign = 'Bass'){
+							clefsign = 'F';
+							clefline = 4;
+						}
+						xmldata = xmldata & '        <clef>\n';
+						xmldata = xmldata & '          <sign>' & clefsign & '</sign>\n';
+						xmldata = xmldata & '          <line>' & clefline & '</line>\n';
+						xmldata = xmldata & '        </clef>\n';
+						xmldata = xmldata & '      </attributes>\n';
+					}
+	         		 
+					if(scr[i].NthBar(bar).NthBarObject(obj).Type = 'BarRest'){
+						if(scr[i].NthBar(bar).NthBarObject(obj).RestType = WholeBarRest){
+							xmldata = xmldata & '      <note>\n';
+							xmldata = xmldata & '        <rest/>\n';
+							xmldata = xmldata & '        <duration>' & scr[i].NthBar(bar).Length & '</duration>\n';
+							xmldata = xmldata & '      </note>\n';
+						}
+					}
+					if(scr[i].NthBar(bar).NthBarObject(obj).Type = 'NoteRest'){
+					if(scr[i].NthBar(bar).NthBarObject(obj).Hidden = true){
+						xmldata = xmldata & '      <forward>\n';
+						xmldata = xmldata & '        <duration>' & scr[i].NthBar(bar).NthBarObject(obj).Duration & '</duration>\n';
+						xmldata = xmldata & '      </forward>\n';
+					}
+					else{
+						xmldata = xmldata & '      <note>\n';
+						if(scr	[i].NthBar(bar).NthBarObject(obj).NoteCount = 0){
+							xmldata = xmldata & '        <rest/>\n';
+	//If this is a tuple	t
+							dotted = 0	;
+							currdur = scr[i].NthBar(bar).NthBarObject(obj).Duration;	
+							if(currdur = 1024){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = 'whole';
+							}
+							if(currdur = 512){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = 'half';
+							}
+							if(currdur = 256){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = 'quarter';
+							}
+							if(currdur = 128){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = 'eighth';
+							}
+							if(currdur = 64){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '16th';
+							}
+							if(currdur = 32){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '32nd';
+							}
+							if(currdur = 16){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '64th';
+							}
+							if(currdur = 8){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '128th';
+							}
+							if(currdur = 4){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '256th';
+							}
+							if(currdur = 1536){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = 'whole';
+								dotted = 1;
+							}
+							if(currdur = 768){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = 'half';
+								dotted = 1;
+							}
+							if(currdur = 384){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = 'quarter';
+								dotted = 1;
+							}
+							if(currdur = 192){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = 'eighth';
+								dotted = 1;
+							}
+							if(currdur = 96){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '16th';
+								dotted = 1;
+							}
+							if(currdur = 48){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '32nd';
+								dotted = 1;
+							}
+							if(currdur = 24){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '64th';
+								dotted = 1;
+							}
+							if(currdur = 12){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '128th';
+								dotted = 1;
+							}
+							if(currdur = 6){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '256th';
+								dotted = 1;
+							}
+//Now do voice	
+							if(scr[i].NthBar(bar).NthBarObject(obj).VoiceNumber > 0){
+								xmldata = xmldata & '        <voice>' & scr[i].NthBar(bar).NthBarObject(obj).VoiceNumber & '</voice>\n';
+							}
+							if(scr[i].NthBar(bar).NthBarObject(obj).VoiceNumber = 0){
+								xmldata = xmldata & '        <voice>' & 1 & '</voice>\n';							
+							}	
+							xmldata = xmldata & '        <type>';
+							xmldata = xmldata & currtype;
+							xmldata = xmldata & '</type>\n';	
+							while(dotted > 0){
+								xmldata = xmldata & '        <dot/>\n';
+								dotted = dotted - 1;
+							}
+							if(scr[i].NthBar(bar).NthBarObject(obj).ParentTupletIfAny != null){
+								ptplet = scr[i].NthBar(bar).NthBarObject(obj).ParentTupletIfAny;
+//	Code to get the type of tuplet it is
+								tupi = 0;
+								tupdur = 0;
+								tuptype = 0;
+								tuptype = ptplet.Left;
+								tupactual = ptplet.Right;
+								xmldata = xmldata & '        <time-modification>\n';
+								xmldata = xmldata & '          <actual-notes>' & tuptype;
+								xmldata = xmldata & '</actual-notes>\n';
+								xmldata = xmldata & '          <normal-notes>' & tupactual;
+								xmldata = xmldata & '</normal-notes>\n'; 
+								xmldata = xmldata & '          <normal-type>' & currtype;
+								xmldata = xmldata & '</normal-type>\n';
+								xmldata = xmldata & '        </time-modification>\n';
+							}
+							xmldata = xmldata & '      </note>\n';
+						}
+						}
+//For each note in chord
+						for n = 0 to scr[i].NthBar(bar).NthBarObject(obj).NoteCount{
+//If it actually is a chord
+							if(n > 0){
+								xmldata = xmldata & '      <note>\n';
+								xmldata = xmldata & '        <chord/>\n';
+							}
+							xmldata = xmldata & '        <pitch>\n';
+							oct = RoundUp((((scr[i].NthBar(bar).NthBarObject(obj)[n].Pitch))/12)) - 1;
+							
+							pit = scr[i].NthBar(bar).NthBarObject(obj)[n].Name;
+							pit = Substring(pit,0,1);
+							if(pit = 'C' and scr[i].NthBar(bar).NthBarObject(obj)[n].Accidental = Flat){
+								oct = oct + 1;
+							}
+							xmldata = xmldata & '          <step>';
+							xmldata = xmldata & pit;
+							xmldata = xmldata & '</step>\n';
+							
+							if(scr[i].NthBar(bar).NthBarObject(obj)[n].Accidental = Sharp){
+								xmldata = xmldata & '          <alter>1</alter>\n';
+							}
+							if(scr[i].NthBar(bar).NthBarObject(obj)[n].Accidental = Flat){
+								xmldata = xmldata & '          <alter>-1</alter>\n';
+							}
+							
+							xmldata = xmldata & '          <octave>';
+							xmldata = xmldata & oct;
+							xmldata = xmldata & '</octave>\n';
+							xmldata = xmldata & '        </pitch>\n';
+							dotted = 0;
+							currdur = scr[i].NthBar(bar).NthBarObject(obj).Duration;
+							if(currdur = 1024){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = 'whole';
+							}
+							if(currdur = 512){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = 'half';
+							}
+							if(currdur = 256){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = 'quarter';
+							}
+							if(currdur = 128){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = 'eighth';
+							}
+							if(currdur = 64){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '16th';
+							}
+							if(currdur = 32){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '32nd';
+							}
+							if(currdur = 16){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '64th';
+							}
+							if(currdur = 8){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '128th';
+							}
+							if(currdur = 4){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '256th';
+							}
+							if(currdur = 1536){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = 'whole';
+								dotted = 1;
+							}
+							if(currdur = 768){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = 'half';
+								dotted = 1;
+							}
+							if(currdur = 384){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = 'quarter';
+								dotted = 1;
+							}
+							if(currdur = 192){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = 'eighth';
+								dotted = 1;
+							}
+							if(currdur = 96){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '16th';
+								dotted = 1;
+							}
+							if(currdur = 48){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '32nd';
+								dotted = 1;
+							}
+							if(currdur = 24){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '64th';
+								dotted = 1;
+							}
+							if(currdur = 12){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '128th';
+								dotted = 1;
+							}
+							if(currdur = 6){
+								xmldata = xmldata & '        <duration>';
+								xmldata = xmldata & currdur;
+								xmldata = xmldata & '</duration>\n';
+								currtype = '256th';
+								dotted = 1;
+							}	
+							if(tied = 1){
+								xmldata = xmldata &  '        <tie type=\'stop\'/>\n';
+								tied = 2;
+							}
+							if(scr[i].NthBar(bar).NthBarObject(obj)[n].Tied){
+								xmldata = xmldata & '        <tie type=\'start\'/>\n';
+								tied = 1;
+							}
+							if(scr[i].NthBar(bar).NthBarObject(obj).VoiceNumber > 0){
+								xmldata = xmldata & '        <voice>' & scr[i].NthBar(bar).NthBarObject(obj).VoiceNumber & '</voice>\n';
+							}
+							if(scr[i].NthBar(bar).NthBarObject(obj).VoiceNumber = 0){
+								xmldata = xmldata & '        <voice>' & 1 & '</voice>\n';							
+							}
+							xmldata = xmldata & '        <type>';
+							xmldata = xmldata & currtype;
+							xmldata = xmldata & '</type>\n';	
+							while(dotted > 0){
+								xmldata = xmldata & '        <dot/>\n';
+								dotted = dotted - 1;
+							}
+							if(scr[i].NthBar(bar).NthBarObject(obj).ParentTupletIfAny != null){
+								ptplet = scr[i].NthBar(bar).NthBarObject(obj).ParentTupletIfAny;
+//Code to	 get the type of tuplet it is
+								tupi = 0;
+								tupdur = 0;
+								tuptype = 0;
+								tuptype = ptplet.Left;
+								tupactual = ptplet.Right;
+								xmldata = xmldata & '        <time-modification>\n';
+								xmldata = xmldata & '          <actual-notes>' & tuptype;
+								xmldata = xmldata & '</actual-notes>\n';
+								xmldata = xmldata & '          <normal-notes>' & tupactual;
+								xmldata = xmldata & '</normal-notes>\n'; 
+								xmldata = xmldata & '          <normal-type>' & currtype;
+								xmldata = xmldata & '</normal-type>\n';
+								xmldata = xmldata & '        </time-modification>\n';
+							}
+							cantbegin = 0;
+							newbar = bar;
+							newobj = obj + 1;
+							if(newobj = scr[i].NthBar(newbar).BarObjectCount){
+								cantbegin = 1;
+							}
+							else{
+								cantbegin = 1;
+								for newobj = obj + 1 to scr[i].NthBar(newbar).BarObjectCount{
+									if(scr[i].NthBar(newbar).NthBarObject(newobj).Type = 'NoteRest'){
+										cantbegin = 0;
+									}
+								}
+							}
+							newobj = obj + 1;
+							if(cantbegin = 0){
+								while(scr[i].NthBar(newbar).NthBarObject(newobj).Type != 'NoteRest'){
+									if(newobj = scr[i].NthBar(newbar).BarObjectCount){
+										newbar = newbar + 1;
+									}
+									newobj = newobj + 1;
+								}
+								if(scr[i].NthBar(newbar).NthBarObject(newobj).NoteCount = 0){
+									cantbegin = 1;
+								}
+								else{
+									if(scr[i].NthBar(newbar).NthBarObject(newobj).Beam != ContinueBeam){
+										cantbegin = 1;
+									}
+								}	
+							}
+							if(currdur < 256){
+								if(scr[i].NthBar(bar).NthBarObject(obj).Beam = StartBeam){
+									beam = 'begin';
+									if(cantbegin = 1){
+										beam = 'no';
+									}
+								}
+								else{
+									if(scr[i].NthBar(bar).NthBarObject(obj).Beam = ContinueBeam){
+									beam = 'continue';
+									}
+									else{
+										if(scr[i].NthBar(bar).NthBarObject(obj).Beam = NoBeam){
+											beam = 'no';
+										}
+										else{
+											if(scr[i].NthBar(bar).NthBarObject(obj).Beam = SingleBeam){
+												beam = 'no';
+											}
+											else{
+												beam = 'end';
+											}
+										}
+									}
+								}
+								if(beam != 'no'){
+									xmldata = xmldata & '        <beam>' & beam & '</beam>\n';
+								}
+							}
+//TIES	TART
+							if(tied = 1){
+								if(notations = 0){
+									xmldata = xmldata & '        <notations>\n';
+									notations = 1;
+								}
+								xmldata = xmldata & '          <tied type=\'start\'/>\n';
+							}
+//TIE STOP						
+							if(tied = 2){
+								if(notations = 0){
+									xmldata = xmldata & '        <notations>\n';
+									notations = 1;
+								}
+								xmldata = xmldata & '          <tied type=\'stop\'/>\n';	
+								tied = 0;
+							}
+							
+							if(scr[i].NthBar(bar).NthBarObject(obj).ParentTupletIfAny != null){
+								if(notations = 0){
+									xmldata = xmldata & '        <notations>\n';
+									notations = 1;
+								}
+								if(scr[i].NthBar(bar).NthBarObject(obj).PositionInTuplet = 0){
+									xmldata = xmldata & '          <tuplet type=\'start\'/>\n';
+								}
+								newobj = obj + 1;
+								newbar = bar;
+								if(newobj = scr[i].NthBar(newbar).BarObjectCount){
+									xmldata = xmldata & '          <tuplet type=\'stop\'/>\n';
+								}
+								else{
+									while(scr[i].NthBar(newbar).NthBarObject(newobj).Type != 'NoteRest'){
+										if(newobj = scr[i].NthBar(newbar).BarObjectCount){
+											newbar = newbar + 1;
+										}
+										newobj = newobj + 1;
+									}
+									if(scr[i].NthBar(bar).NthBarObject(newobj).ParentTupletIfAny = null){
+										xmldata = xmldata & '          <tuplet type=\'stop\'/>\n';
+									}	
+								}
+							}
+							if(notations){
+								xmldata = xmldata & '        </notations>\n';
+								notations = 0;
+							}
+							
+							xmldata = xmldata & '      </note>\n';
+						}
+					}
+				}
+			else{
+				if(scr[i].NthBar(bar).NthBarObject(obj).VoiceNumber > voicei){
+					voicenum = voicei + 1;
+					if(voiceforward = -1){
+						voiceforward = scr[i].NthBar(bar).NthBarObject(obj).Position;
+					}
+				}
+			}
+			}
+			voicei = voicenum;
+			}
+			xmldata = xmldata & '    </measure>\n';
+			Sibelius.UpdateProgressDialog(bar,'Bar ' & bar & ' of ' & scr[i].BarCount);
+		xmldata = xmldata & '  </part>\n';
+		return xmldata;}"
+	createscoreheader "(scr) {
+xmldata = '';
+sibver = '';
+copy = CreateSparseArray();
+xmldata = '  <movement-title>' & scr.Title & '</movement-title>\n';
+xmldata = xmldata & '<identification>\n';
+xmldata = xmldata & '  <creator type=\'composer\'>' & scr.Composer & '</creator>\n';
+copy = SplitString(scr.Copyright,Chr(169));
+xmldata = xmldata & '  <rights>' & copy[0] & copy[1] & '</rights>\n';
+date = Sibelius.CurrentDate;
+xmldata = xmldata & '  <encoding>\n';
+xmldata = xmldata & '      <encoding-date>' & date.Year & '-' & date.Month & '-' & date.DayOfMonth & '</encoding-date>\n';
+xmldata = xmldata & '      <encoder>Aaron Lehrian</encoder>\n';
+sibver = Sibelius.ProgramVersion;
+xmldata = xmldata & '      <software>Sibelius ' & Substring(sibver,0,1) & '.' & Substring(sibver,1,1) & '.' & Substring(sibver,2,1) & ' for ' & Sibelius.OSVersionString & '</software>\n';
+xmldata = xmldata & '      <encoding-description>Score exported using SibExport (http://code.google.com/p/sibexport)</encoding-description>\n';
+xmldata = xmldata & '    </encoding>\n';
+xmldata = xmldata & '</identification>\n';
+return xmldata;}"
+	fname
+	mydocsmessage
